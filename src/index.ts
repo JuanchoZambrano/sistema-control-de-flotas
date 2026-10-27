@@ -1,9 +1,30 @@
-import express, { type Request, type Response } from "express";
+import express, {
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
+import { ok } from "node:assert";
 
 const app = express();
 const port = 3000;
 
 app.use(express.json());
+
+/* CREACION DEL CUSTOM MIDDLEWARE */
+
+function apiKeyValidator(req: Request, res: Response, next: NextFunction) {
+  const apiKey = req.headers[`x-api-key`];
+  if (!apiKey || apiKey !== "funval-2026-10") {
+    res.status(401).json({
+      ok: false,
+      mensaje: "Acceso no autorizado.",
+    });
+    return;
+  }
+  next();
+}
+
+/* app.use(apiKeyValidator); */ // Poner restriccion a todos los endpoints
 
 interface Vehiculo {
   id: number;
@@ -118,26 +139,25 @@ app.put("/api/vehiculos/:id", function (req: Request, res: Response) {
   });
 });
 
-app.delete("/api/vehiculos/:id", (req: Request, res: Response) => {
+app.delete("/api/vehiculos/:id", apiKeyValidator, (req: Request, res: Response) => {
+  // Hard Delete
   const idToDeleteVehiculo = Number(req.params.id);
-  const findVehiculo = listaVehiculos.findIndex((v) => v.id === idToDeleteVehiculo);
+  const findVehiculo = listaVehiculos.findIndex(
+    (v) => v.id === idToDeleteVehiculo,
+  );
 
   if (findVehiculo === -1)
-    return res
-      .status(404)
-      .json({
-        ok: false,
-        mensaje: `No se encontró un vehiculo de ID: ${idToDeleteVehiculo}`,
-      });
+    return res.status(404).json({
+      ok: false,
+      mensaje: `No se encontró un vehiculo de ID: ${idToDeleteVehiculo}`,
+    });
 
   listaVehiculos.splice(findVehiculo, 1);
 
-  res
-    .status(200)
-    .json({
-      ok: true,
-      mensaje: `El vehiculo de ID: ${idToDeleteVehiculo} ha sido eliminado.`,
-    });
+  res.status(200).json({
+    ok: true,
+    mensaje: `El vehiculo de ID: ${idToDeleteVehiculo} ha sido eliminado.`,
+  });
 });
 
 app.listen(port, function () {
